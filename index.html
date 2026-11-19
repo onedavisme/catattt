@@ -1,0 +1,444 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CatatDuit - Catat Keuangan Harian</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar hide for clean mobile UI */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Smooth bottom sheet animation */
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0.5; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-200 text-slate-800 antialiased selection:bg-brand-500 selection:text-white flex justify-center min-h-screen">
+
+  <!-- Mobile App Container (Simulates Android Screen on Desktop, Fullscreen on Mobile) -->
+  <div class="w-full max-w-md bg-slate-50 min-h-screen sm:min-h-[840px] sm:my-4 sm:rounded-[2.25rem] sm:shadow-2xl sm:border-[6px] sm:border-slate-900 relative flex flex-col overflow-hidden">
+    
+    <!-- Top Status & App Bar -->
+    <header class="bg-white/90 backdrop-blur-md sticky top-0 z-20 px-5 pt-5 pb-3.5 border-b border-slate-100 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-sm shadow-brand-600/30">
+          <i data-lucide="wallet" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-lg text-slate-900 leading-tight">CatatDuit</h1>
+          <p class="text-xs text-slate-500 font-medium" id="currentDateLabel">Keuangan Pribadi</p>
+        </div>
+      </div>
+
+      <!-- Menu / Reset Sample Button -->
+      <div class="relative">
+        <button id="menuBtn" onclick="toggleMenu()" class="p-2.5 rounded-full hover:bg-slate-100 active:bg-slate-200 text-slate-600 transition-colors" aria-label="Menu Opsi">
+          <i data-lucide="more-vertical" class="w-5 h-5"></i>
+        </button>
+        <!-- Dropdown Menu -->
+        <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-30 animate-fade-in">
+          <button onclick="resetSampleData()" class="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-brand-600"></i>
+            <span>Muat Data Contoh</span>
+          </button>
+          <button onclick="openConfirmClear()" class="w-full px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2.5">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <span>Hapus Semua Data</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Scrollable Content -->
+    <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-28 space-y-5">
+      
+      <!-- 1. Balance Summary Card (Material 3 Elevated Card) -->
+      <section class="bg-gradient-to-br from-slate-900 via-slate-800 to-brand-950 text-white rounded-3xl p-5 shadow-lg shadow-slate-900/15 relative overflow-hidden">
+        <!-- Decorative subtle circles -->
+        <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-brand-500/15 blur-xl pointer-events-none"></div>
+        <div class="absolute -left-8 -bottom-10 w-32 h-32 rounded-full bg-emerald-400/10 blur-xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-medium text-slate-300 uppercase tracking-wider">Total Saldo Saat Ini</span>
+          <button onclick="toggleHideBalance()" class="p-1.5 rounded-full hover:bg-white/10 text-slate-300 transition" title="Sembunyikan/Tampilkan Saldo">
+            <i id="eyeIcon" data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+        </div>
+        
+        <div class="font-display font-extrabold text-3xl tracking-tight mb-5" id="totalBalance">
+          Rp 0
+        </div>
+
+        <!-- Income & Expense Pills -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+            <div class="flex items-center gap-1.5 text-emerald-300 text-xs font-medium mb-1">
+              <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
+              </div>
+              <span>Pemasukan</span>
+            </div>
+            <p class="font-display font-bold text-sm sm:text-base text-white truncate" id="totalIncome">Rp 0</p>
+          </div>
+
+          <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+            <div class="flex items-center gap-1.5 text-rose-300 text-xs font-medium mb-1">
+              <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center">
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+              </div>
+              <span>Pengeluaran</span>
+            </div>
+            <p class="font-display font-bold text-sm sm:text-base text-white truncate" id="totalExpense">Rp 0</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Expense Category Breakdown -->
+      <section id="breakdownSection" class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-bold text-sm text-slate-800 flex items-center gap-2">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-brand-600"></i>
+            <span>Ringkasan Pengeluaran</span>
+          </h2>
+          <span class="text-xs font-medium text-slate-400" id="expenseRatioLabel">0% dari pemasukan</span>
+        </div>
+
+        <!-- Multi-segment Progress Bar -->
+        <div id="categoryBarContainer" class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex gap-0.5 mb-3">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Top Category Legend -->
+        <div id="categoryLegend" class="flex flex-wrap gap-2">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 3. Transaction History Section -->
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-display font-bold text-base text-slate-900">Riwayat Transaksi</h2>
+          <span class="text-xs font-medium text-slate-500" id="transactionCount">0 catatan</span>
+        </div>
+
+        <!-- Material 3 Filter Chips -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button onclick="setFilter('all')" id="filter-all" class="filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-slate-900 text-white shadow-sm">
+            Semua
+          </button>
+          <button onclick="setFilter('expense')" id="filter-expense" class="filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:bg-slate-100">
+            Pengeluaran
+          </button>
+          <button onclick="setFilter('income')" id="filter-income" class="filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:bg-slate-100">
+            Pemasukan
+          </button>
+        </div>
+
+        <!-- Transaction List Container -->
+        <div id="transactionList" class="space-y-2.5">
+          <!-- Transactions will be rendered here -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Material 3 Extended Floating Action Button (FAB) -->
+    <div class="absolute bottom-6 right-5 z-20">
+      <button onclick="openAddModal()" class="flex items-center gap-2.5 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-display font-bold text-sm px-5 py-4 rounded-2xl shadow-xl shadow-brand-600/35 transition-all">
+        <i data-lucide="plus" class="w-5 h-5 stroke-[2.5]"></i>
+        <span>Catat Baru</span>
+      </button>
+    </div>
+
+    <!-- Toast Notification Banner (Replaces alert) -->
+    <div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-2xl shadow-lg flex items-center gap-2 animate-fade-in max-w-[90%]">
+      <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+      <span id="toastMessage">Transaksi tersimpan</span>
+    </div>
+
+    <!-- Add Transaction Bottom Sheet Modal -->
+    <div id="addModal" class="hidden fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+      <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up max-h-[92vh] overflow-y-auto">
+        <!-- Drag Handle -->
+        <div class="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 sm:hidden"></div>
+        
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-display font-bold text-lg text-slate-900">Catat Transaksi</h3>
+          <button onclick="closeAddModal()" class="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <form id="transactionForm" onsubmit="handleSaveTransaction(event)" class="space-y-4">
+          <!-- Segmented Control: Pengeluaran / Pemasukan -->
+          <div class="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl">
+            <button type="button" id="btnTypeExpense" onclick="setTransactionType('expense')" class="py-2.5 rounded-xl text-xs font-bold transition-all bg-white text-rose-600 shadow-xs">
+              Pengeluaran
+            </button>
+            <button type="button" id="btnTypeIncome" onclick="setTransactionType('income')" class="py-2.5 rounded-xl text-xs font-bold transition-all text-slate-500 hover:text-slate-700">
+              Pemasukan
+            </button>
+          </div>
+          <input type="hidden" id="txType" value="expense" />
+
+          <!-- Nominal Input -->
+          <div>
+            <label for="txAmount" class="block text-xs font-semibold text-slate-500 mb-1.5">Nominal (Rp)</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 font-display font-bold text-slate-400 text-lg">Rp</span>
+              <input 
+                type="text" 
+                id="txAmount" 
+                inputmode="numeric"
+                placeholder="0" 
+                required
+                oninput="formatRupiahInput(this)"
+                class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 rounded-2xl font-display font-bold text-2xl text-slate-900 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- Category Selector Grid -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-2">Pilih Kategori</label>
+            <div id="categoryGrid" class="grid grid-cols-3 gap-2">
+              <!-- Populated dynamically via JS based on transaction type -->
+            </div>
+            <input type="hidden" id="txCategory" required />
+          </div>
+
+          <!-- Notes / Keterangan -->
+          <div>
+            <label for="txNote" class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan / Keterangan</label>
+            <input 
+              type="text" 
+              id="txNote" 
+              placeholder="Contoh: Makan siang nasi padang" 
+              required
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 rounded-2xl text-sm text-slate-800 outline-none transition-all"
+            />
+          </div>
+
+          <!-- Date Input -->
+          <div>
+            <label for="txDate" class="block text-xs font-semibold text-slate-500 mb-1.5">Tanggal</label>
+            <input 
+              type="date" 
+              id="txDate" 
+              required
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 rounded-2xl text-sm text-slate-800 outline-none transition-all"
+            />
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-2">
+            <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-display font-bold text-sm rounded-2xl shadow-lg shadow-brand-600/25 transition-all">
+              Simpan Catatan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Custom Confirmation Modal (Replaces confirm()) -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-5 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+      <div class="w-full max-w-xs bg-white rounded-3xl p-6 shadow-2xl text-center">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-display font-bold text-base text-slate-900 mb-1">Hapus Semua Data?</h3>
+        <p class="text-xs text-slate-500 mb-5 leading-relaxed">Seluruh riwayat pemasukan dan pengeluaran yang tersimpan akan dihapus permanen.</p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="closeConfirmClear()" class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+            Batal
+          </button>
+          <button onclick="clearAllData()" class="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition">
+            Ya, Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- CONFIGURATION & CATEGORIES ---
+    const STORAGE_KEY = 'catatduit_transactions_v1';
+    
+    const CATEGORIES = {
+      expense: [
+        { id: 'makan', name: 'Makan & Minum', icon: 'utensils', color: 'bg-orange-500', badgeBg: 'bg-orange-100', badgeText: 'text-orange-600' },
+        { id: 'transport', name: 'Transportasi', icon: 'car', color: 'bg-blue-500', badgeBg: 'bg-blue-100', badgeText: 'text-blue-600' },
+        { id: 'belanja', name: 'Belanja', icon: 'shopping-bag', color: 'bg-pink-500', badgeBg: 'bg-pink-100', badgeText: 'text-pink-600' },
+        { id: 'tagihan', name: 'Tagihan & Pulsa', icon: 'receipt', color: 'bg-purple-500', badgeBg: 'bg-purple-100', badgeText: 'text-purple-600' },
+        { id: 'hiburan', name: 'Hiburan', icon: 'gamepad-2', color: 'bg-amber-500', badgeBg: 'bg-amber-100', badgeText: 'text-amber-600' },
+        { id: 'lainnya', name: 'Lainnya', icon: 'more-horizontal', color: 'bg-slate-500', badgeBg: 'bg-slate-100', badgeText: 'text-slate-600' }
+      ],
+      income: [
+        { id: 'gaji', name: 'Gaji / Proyek', icon: 'briefcase', color: 'bg-emerald-500', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-600' },
+        { id: 'bonus', name: 'Bonus / THR', icon: 'gift', color: 'bg-teal-500', badgeBg: 'bg-teal-100', badgeText: 'text-teal-600' },
+        { id: 'investasi', name: 'Hasil Usaha', icon: 'trending-up', color: 'bg-cyan-500', badgeBg: 'bg-cyan-100', badgeText: 'text-cyan-600' },
+        { id: 'lainnya_in', name: 'Lainnya', icon: 'plus-circle', color: 'bg-slate-500', badgeBg: 'bg-slate-100', badgeText: 'text-slate-600' }
+      ]
+    };
+
+    // Helper to get today's YYYY-MM-DD in local timezone
+    function getTodayDateString(offsetDays = 0) {
+      const date = new Date();
+      date.setDate(date.getDate() + offsetDays);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Realistic initial Indonesian sample data
+    function getInitialSampleData() {
+      return [
+        {
+          id: 'tx-1',
+          type: 'income',
+          amount: 4500000,
+          category: 'gaji',
+          note: 'Pembayaran Proyek Desain Web',
+          date: getTodayDateString(-3)
+        },
+        {
+          id: 'tx-2',
+          type: 'expense',
+          amount: 32000,
+          category: 'makan',
+          note: 'Kopi Susu Gula Aren & Sarapan',
+          date: getTodayDateString(0)
+        },
+        {
+          id: 'tx-3',
+          type: 'expense',
+          amount: 50000,
+          category: 'transport',
+          note: 'Isi Bensin Pertalite Full',
+          date: getTodayDateString(-1)
+        },
+        {
+          id: 'tx-4',
+          type: 'expense',
+          amount: 165000,
+          category: 'tagihan',
+          note: 'Token Listrik & Paket Data',
+          date: getTodayDateString(-2)
+        },
+        {
+          id: 'tx-5',
+          type: 'expense',
+          amount: 85000,
+          category: 'belanja',
+          note: 'Belanja Kebutuhan Harian Minimarket',
+          date: getTodayDateString(-2)
+        }
+      ];
+    }
+
+    // --- APP STATE ---
+    let transactions = [];
+    let currentFilter = 'all';
+    let isBalanceHidden = false;
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadTransactions();
+      updateHeaderDate();
+      renderApp();
+    });
+
+    function loadTransactions() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved !== null) {
+          transactions = JSON.parse(saved);
+        } else {
+          transactions = getInitialSampleData();
+          saveTransactions();
+        }
+      } catch (e) {
+        console.error('Gagal memuat localStorage:', e);
+        transactions = getInitialSampleData();
+      }
+    }
+
+    function saveTransactions() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+      } catch (e) {
+        console.error('Gagal menyimpan ke localStorage:', e);
+      }
+    }
+
+    // --- FORMATTING HELPERS ---
+    function formatRupiah(number) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(number);
+    }
+
+    function formatRupiahInput(input) {
+      let value = input.value.replace(/[^0-9]/g, '');
+      if (value) {
+        input.value = parseInt(value, 10).toLocaleString('id-ID');
+      } else {
+        input.value = '';
+      }
+    }
+
+    function formatDisplayDate(dateStr) {
+      const t
